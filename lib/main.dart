@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/goal_provider.dart';
+import 'screens/home_screen.dart';
+import 'screens/log_screen.dart';
+import 'screens/weekly_screen.dart';
+import 'screens/settings_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const KaeriKaloApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GoalProvider()),
+      ],
+      child: const KaerikaroApp(),
+    ),
+  );
 }
 
-class KaeriKaloApp extends StatelessWidget {
-  const KaeriKaloApp({super.key});
+class KaerikaroApp extends StatelessWidget {
+  const KaerikaroApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'カエリカロ',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2EC4B6), // ミント
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF2EC4B6)),
       home: const RootTabs(),
     );
   }
@@ -33,11 +40,12 @@ class RootTabs extends StatefulWidget {
 class _RootTabsState extends State<RootTabs> {
   int idx = 0;
   final pages = const [
-    _PlaceholderPage('Home（今日の目標・達成率・提案）'),
-    _PlaceholderPage('Log（アクション記録）'),
-    _PlaceholderPage('Weekly（週レポート）'),
-    _PlaceholderPage('Settings（設定）'),
+    HomeScreen(),
+    LogScreen(),
+    WeeklyScreen(),
+    SettingsScreen(),
   ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,14 +61,5 @@ class _RootTabsState extends State<RootTabs> {
         ],
       ),
     );
-  }
-}
-
-class _PlaceholderPage extends StatelessWidget {
-  final String text;
-  const _PlaceholderPage(this.text, {super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Text(text));
   }
 }
