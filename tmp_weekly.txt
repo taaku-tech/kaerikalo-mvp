@@ -1,0 +1,267 @@
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../models/activity_log.dart';
+import '../../models/daily_goal.dart';
+import '../../services/weekly_report_service.dart';\nimport 'package:provider/provider.dart';\nimport '../../providers/auth_provider.dart';\nimport '../../services/calorie_service.dart';
+
+class WeeklyReportPage extends StatefulWidget {
+const WeeklyReportPage({super.key});
+
+@override
+State<WeeklyReportPage> createState() => _WeeklyReportPageState();
+}
+
+class _WeeklyReportPageState extends State<WeeklyReportPage> {
+late DateTime _weekStart;
+
+@override
+void initState() {
+super.initState();
+_weekStart = WeeklyReportService.weekStartOf(DateTime.now());
+}
+
+void _prevWeek() {
+setState(() => _weekStart = _weekStart.subtract(const Duration(days: 7)));
+}
+
+void _nextWeek() {
+setState(() => _weekStart = _weekStart.add(const Duration(days: 7)));
+}
+
+@override
+Widget build(BuildContext context) {
+return Scaffold(
+appBar: AppBar(
+title: const Text('騾ｱ谺｡繝ｬ繝昴・繝・),
+actions: [
+Builder(builder: (context) {
+final report = WeeklyReportService.generate(_weekStart, weightKg: context.read<AuthProvider>().profile?.weightKg);
+final rangeText = _formatRange(report.start, report.end);
+return IconButton(
+icon: const Icon(Icons.share),
+onPressed: () {
+final msg = _shareText(report, rangeText);
+Share.share(msg);
+},
+);
+})
+],
+),
+body: ValueListenableBuilder(
+valueListenable: Hive.box<ActivityLog>('activity_logs').listenable(),
+builder: (context, _, __) {
+return ValueListenableBuilder(
+valueListenable: Hive.box<DailyGoal>('daily_goals').listenable(),
+builder: (context, __, ___) {
+final report = WeeklyReportService.generate(_weekStart, weightKg: context.read<AuthProvider>().profile?.weightKg);
+final rangeText = _formatRange(report.start, report.end);
+final best = report.trend.isEmpty
+? null
+: report.trend.reduce((a, b) => a.kcal >= b.kcal ? a : b);
+final maxKcal = (report.trend
+.map((e) => e.kcal)
+.fold<double>(0, (p, e) => e > p ? e : p))
+.clamp(1, double.infinity);
+
+          // 逶ｴ霑・蟷ｴ/蜊雁ｹｴ縺ｮ蜷郁ｨ・cal
+          final logsBox = Hive.box<ActivityLog>('activity_logs');
+          final now = DateTime.now();
+          final yearAgo = DateTime(now.year - 1, now.month, now.day);
+          final halfYearAgo = now.subtract(const Duration(days: 182));
+          double sumKcalInRange(DateTime from, DateTime to) {
+            return logsBox.values
+                .whereType<ActivityLog>()
+                .where((e) => !e.date.isBefore(from) && !e.date.isAfter(to))
+                .fold<double>(0.0, (s, e) => s + e.estKcal);
+          }
+          final yearKcal = sumKcalInRange(yearAgo, now);
+          final halfYearKcal = sumKcalInRange(halfYearAgo, now);
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
+                children: [
+                  IconButton(onPressed: _prevWeek, icon: const Icon(Icons.chevron_left)),
+                  Expanded(
+                    child: Center(
+                      child: Text(rangeText, style: Theme.of(context).textTheme.titleMedium),
+                    ),
+                  ),
+                  IconButton(onPressed: _nextWeek, icon: const Icon(Icons.chevron_right)),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 邱剰ｨ茨ｼ・鬆・岼・区耳螳嗅cal蜷郁ｨ茨ｼ狗峩霑・蟷ｴ/蜊雁ｹｴ・・              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('邱剰ｨ・, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text('驕蝗槭ｊ縺ｧ蟶ｰ螳・ｼ亥・・・ ${report.stepsTotal} 蛻・),
+                      Text('繧ゅｂ荳翫￡・亥屓・・ ${report.highKneeTotal} 蝗・),
+                      Text('譌ｩ豁ｩ縺搾ｼ育ｧ抵ｼ・ ${report.walkFastTotal} 遘・),
+                      Text('髫取ｮｵ・域ｮｵ・・ ${report.stairsTotal} 谿ｵ'),
+                      Text('縺九°縺ｨ荳翫￡・亥屓・・ ${report.calfRaiseTotal} 蝗・),
+                      const SizedBox(height: 8),
+                      Text('謗ｨ螳嗅cal蜷郁ｨ茨ｼ井ｻ企ｱ・・ ${report.kcalTotal.toStringAsFixed(1)} kcal'),
+                      Text('謗ｨ螳嗅cal蜷郁ｨ茨ｼ育峩霑・蟷ｴ・・ ${yearKcal.toStringAsFixed(1)} kcal'),
+                      Text('謗ｨ螳嗅cal蜷郁ｨ茨ｼ育峩霑大濠蟷ｴ・・ ${halfYearKcal.toStringAsFixed(1)} kcal'),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 蟷ｳ蝮・＃謌千紫繝ｻ繝吶せ繝医ョ繧､
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('蟷ｳ蝮・＃謌千紫'),
+                          Text('${(report.avgProgress * 100).toStringAsFixed(1)}%'),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('繝吶せ繝医ョ繧､'),
+                          Text(best == null ? '-' : _ymd(best.date)),
+                          Text(best == null ? 'kcal 0.0' : 'kcal ${best.kcal.toStringAsFixed(1)}'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 1騾ｱ髢薙・謗ｨ遘ｻ・・cal・・ 邵ｦ霆ｸ縺ｫ譛螟ｧ/0縺ｮ邁｡譏鍋岼逶帙ｊ縲√ヰ繝ｼ荳翫↓蠖捺律kcal・亥ｰ乗焚1譯・ｼ・              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('1騾ｱ髢薙・謗ｨ遘ｻ (kcal)'),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 180,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // 邵ｦ霆ｸ・育ｰ｡譏難ｼ・                            Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(maxKcal.toStringAsFixed(1)),
+                                const SizedBox(height: 120),
+                                const Text('0'),
+                              ],
+                            ),
+                            const SizedBox(width: 6),
+                            for (final d in report.trend)
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      // 蠖捺律縺ｮ螳溽ｸｾkcal・亥ｰ乗焚1譯・ｼ・                                      Text(d.kcal.toStringAsFixed(1), style: const TextStyle(fontSize: 10)),
+                                      const SizedBox(height: 2),
+                                      Flexible(
+                                        child: Container(
+                                          height: (d.kcal / maxKcal) * 120 + 1,
+                                          color: Colors.teal,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // 譌･莉假ｼ・M/DD + 譖懈律・会ｼ・蠖捺律縺ｮ驕疲・邇・                                      Builder(builder: (context) {
+                                        final goalsBox = Hive.box<DailyGoal>('daily_goals');
+                                        final g = goalsBox.get(_ymd(d.date));
+                                        final tgt = g?.targetKcal ?? 300;
+                                        final dayPct = tgt <= 0 ? 0.0 : (d.kcal / tgt) * 100.0;
+                                        return Text(
+                                          '${_dateWithWeekday(d.date)}\n(${dayPct.toStringAsFixed(1)}%)',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 11),
+                                        );
+                                      }),
+                                      const SizedBox(height: 2),
+                                      // 縺昴・譌･縺ｮ蜊倅ｽ肴ュ蝣ｱ・亥・/蝗・遘・谿ｵ/蝗橸ｼ・                                      Builder(builder: (context) {
+                                        final logsBox = Hive.box<ActivityLog>('activity_logs');
+                                        double sumK(String id) => logsBox.values
+                                            .whereType<ActivityLog>()
+                                            .where((e) => _ymd(e.date) == _ymd(d.date) && e.actionId == id)
+                                            .fold<double>(0.0, (s, e) => s + e.estKcal);
+                                        final walkMin  = CalorieService.kcalToDetourMinutes(sumK('walk'), weightKg: context.read<AuthProvider>().profile?.weightKg);
+                                        final hkReps  = CalorieService.kcalToHighKneeReps(sumK('highKnee'), weightKg: context.read<AuthProvider>().profile?.weightKg);
+                                        final wfSec   = CalorieService.kcalToFastWalkSeconds(sumK('walk_fast'), weightKg: context.read<AuthProvider>().profile?.weightKg);
+                                        final stSteps = CalorieService.kcalToStairsSteps(sumK('stairs'), weightKg: context.read<AuthProvider>().profile?.weightKg);
+                                        final crReps  = CalorieService.kcalToCalfRaiseReps(sumK('calfRaise'), weightKg: context.read<AuthProvider>().profile?.weightKg);
+                                        return Text(
+                                          '驕蝗槭ｊ縺ｧ蟶ｰ螳・ｼ亥・・・$walkMin 繧ゅｂ荳翫￡・亥屓・・$hkReps 譌ｩ豁ｩ縺搾ｼ育ｧ抵ｼ・$wfSec 髫取ｮｵ・域ｮｵ・・$stSteps 縺九°縺ｨ荳翫￡・亥屓・・$crReps',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 10),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+);
+}
+
+String _formatRange(DateTime s, DateTime e) {
+return '${_ymd(s)} ~ ${_ymd(e)}';
+}
+
+String _ymd(DateTime d) {
+final y = d.year.toString().padLeft(4, '0');
+final m = d.month.toString().padLeft(2, '0');
+final day = d.day.toString().padLeft(2, '0');
+return '$y-$m-$day';
+}
+
+String _dateWithWeekday(DateTime d) {
+const labels = ['譛・, '轣ｫ', '豌ｴ', '譛ｨ', '驥・, '蝨・, '譌･'];
+final yobi = labels[d.weekday - 1];
+return '${d.month}譛・{d.day}譌･\n($yobi)';
+}
+
+String _shareText(WeeklyReportResult r, String rangeText) {
+final buf = StringBuffer();
+buf.writeln('縲宣ｱ谺｡繝ｬ繝昴・繝医・rangeText');
+buf.writeln('驕蝗槭ｊ・亥・・・${r.stepsTotal}・上ｂ繧ゆｸ翫￡:${r.highKneeTotal}蝗橸ｼ乗掠豁ｩ縺・${r.walkFastTotal}遘抵ｼ城嚴谿ｵ:${r.stairsTotal}谿ｵ・上°縺九→荳翫￡:${r.calfRaiseTotal}蝗・);
+buf.writeln('蜷郁ｨ・cal:${r.kcalTotal.toStringAsFixed(1)}縲蟷ｳ蝮・＃謌千紫:${(r.avgProgress * 100).toStringAsFixed(1)}%');
+for (final d in r.trend) {
+buf.writeln('${_ymd(d.date)} kcal:${d.kcal.toStringAsFixed(1)}');
+}
+return buf.toString();
+}
+}
+
+

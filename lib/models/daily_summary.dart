@@ -1,6 +1,14 @@
+import 'package:hive/hive.dart';
+
+part 'daily_summary.g.dart';
+
+@HiveType(typeId: 12)
 class DailySummary {
+  @HiveField(0)
   final DateTime date;
+  @HiveField(1)
   final int targetKcal;
+  @HiveField(2)
   final double burnedKcal;
 
   const DailySummary({

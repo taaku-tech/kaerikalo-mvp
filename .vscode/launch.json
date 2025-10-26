@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (FakeAuth)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=USE_FAKE_AUTH=true"],
+      "toolArgs": ["--dart-define=USE_FAKE_AUTH=true"]
+    }
+  ]
+}
+

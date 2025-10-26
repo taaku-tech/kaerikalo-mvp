@@ -1,0 +1,187 @@
+import '../repositories/activity_repository.dart';
+import '../repositories/daily_goal_repository.dart';
+import '../data/repo.dart';\nimport 'calorie_service.dart';
+
+class WeeklyReportResult {
+final DateTime start;
+final DateTime end;
+
+// 1騾ｱ髢灘粋險茨ｼ亥腰菴肴鋤邂怜ｾ後・蜷郁ｨ茨ｼ・final int stepsTotal; // 驕蝗槭ｊ縺ｧ蟶ｰ螳・ｼ・alk・・ 蛻・final int stairsTotal; // 髫取ｮｵ・・tairs・・ 谿ｵ
+final int microTotal; // 縺昴・莉厄ｼ亥ｾ梧婿莠呈鋤・冗樟迥ｶ譛ｪ菴ｿ逕ｨ・・final int highKneeTotal; // 繧ゅｂ荳翫￡・・ighKnee・・ 蝗・final int walkFastTotal; // 譌ｩ豁ｩ縺搾ｼ・alk_fast・・ 遘・final int calfRaiseTotal; // 縺九°縺ｨ荳翫￡・・alfRaise・・ 蝗・
+// 騾ｲ謐暦ｼ亥粋險茨ｼ・final double avgProgress; // 0..1
+final double kcalTotal; // 1騾ｱ髢薙・螳溽ｸｾkcal蜷郁ｨ・
+// 譌･蛻･繝医Ξ繝ｳ繝会ｼ・cal縺ｯdouble・・final List<DailyTrendEntry> trend;
+
+const WeeklyReportResult({
+required this.start,
+required this.end,
+required this.stepsTotal,
+required this.stairsTotal,
+required this.microTotal,
+required this.highKneeTotal,
+required this.walkFastTotal,
+required this.calfRaiseTotal,
+required this.avgProgress,
+required this.kcalTotal,
+required this.trend,
+});
+}
+
+class DailyTrendEntry {
+final DateTime date;
+final int steps; // 陦ｨ遉ｺ逕ｨ騾費ｼ亥ｾ捺擂縺ｮ莠呈鋤・・final int stairs; // 陦ｨ遉ｺ逕ｨ騾費ｼ亥ｾ捺擂縺ｮ莠呈鋤・・final int micro; // 陦ｨ遉ｺ逕ｨ騾費ｼ亥ｾ捺擂縺ｮ莠呈鋤・・final double kcal; // 蠖捺律kcal蜷郁ｨ・
+const DailyTrendEntry({
+required this.date,
+required this.steps,
+required this.stairs,
+required this.micro,
+required this.kcal,
+});
+}
+
+class WeeklyReportService {
+static DateTime weekStartOf(DateTime date) {
+final d = DateTime(date.year, date.month, date.day);
+// Monday start
+final weekday = d.weekday; // 1(Mon) .. 7(Sun)
+return d.subtract(Duration(days: weekday - 1));
+}
+
+// 蜊倅ｽ肴鋤邂暦ｼ・cal 竊・蜷・腰菴搾ｼ・static int _kcalToMinutes(double kcal, {double? weightKg}) => CalorieService.kcalToDetourMinutes(kcal, weightKg: weightKg);\nstatic int _kcalToSeconds(double kcal, {double? weightKg}) => CalorieService.kcalToFastWalkSeconds(kcal, weightKg: weightKg);\nstatic int _kcalToStairs(double kcal, {double? weightKg}) => CalorieService.kcalToStairsSteps(kcal, weightKg: weightKg);\nstatic int _kcalToHighKnee(double kcal, {double? weightKg}) => CalorieService.kcalToHighKneeReps(kcal, weightKg: weightKg);\nstatic int _kcalToCalfRaise(double kcal, {double? weightKg}) => CalorieService.kcalToCalfRaiseReps(kcal, weightKg: weightKg);\nstatic WeeklyReportResult generate(DateTime forWeekStart, {double? weightKg}) {
+final start = DateTime(forWeekStart.year, forWeekStart.month, forWeekStart.day);
+final end = start.add(const Duration(days: 6));
+
+final logs = ActivityRepository.fetchBetween(start, end);
+
+int stepsTotal = 0;      // 驕蝗槭ｊ縺ｧ蟶ｰ螳・ｼ亥・・・int stairsTotal = 0;     // 髫取ｮｵ・域ｮｵ・・int microTotal = 0;      // 縺昴・莉厄ｼ井ｺ呈鋤・・int highKneeTotal = 0;   // 繧ゅｂ荳翫￡・亥屓・・int walkFastTotal = 0;   // 譌ｩ豁ｩ縺搾ｼ育ｧ抵ｼ・int calfRaiseTotal = 0;  // 縺九°縺ｨ荳翫￡・亥屓・・
+double kcalTotal = 0.0;
+
+final dailyMap = <String, DailyTrendEntry>{};
+for (int i = 0; i < 7; i++) {
+  final d = start.add(Duration(days: i));
+  dailyMap[Repo.ymd(d)] = DailyTrendEntry(
+    date: d,
+    steps: 0,
+    stairs: 0,
+    micro: 0,
+    kcal: 0.0,
+  );
+}
+
+for (final l in logs) {
+  final key = l.ymd;
+  final entry = dailyMap[key];
+  if (entry == null) continue;
+
+  final kcal = l.estKcal;
+
+  switch (l.actionId) {
+    case 'walk':
+      final minutes = _kcalToMinutes(kcal, weightKg: weightKg);
+      stepsTotal += minutes;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps + minutes,
+        stairs: entry.stairs,
+        micro: entry.micro,
+        kcal: entry.kcal + kcal,
+      );
+      break;
+
+    case 'stairs':
+      final stairs = _kcalToStairs(kcal, weightKg: weightKg);
+      stairsTotal += stairs;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps,
+        stairs: entry.stairs + stairs,
+        micro: entry.micro,
+        kcal: entry.kcal + kcal,
+      );
+      break;
+
+    case 'highKnee':
+      final repsHK = _kcalToHighKnee(kcal, weightKg: weightKg);
+      highKneeTotal += repsHK;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps,
+        stairs: entry.stairs,
+        micro: entry.micro + repsHK,
+        kcal: entry.kcal + kcal,
+      );
+      break;
+
+    case 'walk_fast':
+      final secs = _kcalToSeconds(kcal, weightKg: weightKg);
+      walkFastTotal += secs;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps,
+        stairs: entry.stairs,
+        micro: entry.micro + secs,
+        kcal: entry.kcal + kcal,
+      );
+      break;
+
+    case 'calfRaise':
+      final repsCR = _kcalToCalfRaise(kcal, weightKg: weightKg);
+      calfRaiseTotal += repsCR;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps,
+        stairs: entry.stairs,
+        micro: entry.micro + repsCR,
+        kcal: entry.kcal + kcal,
+      );
+      break;
+
+    default:
+      // 莠呈鋤逕ｨ縺ｮ縺昴・莉也ｨｮ逶ｮ・医％縺薙↓蜈･縺｣縺ｦ縺上ｋ蝣ｴ蜷医・蠕捺擂莉墓ｧ假ｼ・      final amt = (l.amount is int) ? l.amount as int : l.amount.toInt();
+      microTotal += amt;
+      dailyMap[key] = DailyTrendEntry(
+        date: entry.date,
+        steps: entry.steps,
+        stairs: entry.stairs,
+        micro: entry.micro + amt,
+        kcal: entry.kcal + kcal,
+      );
+  }
+
+  kcalTotal += kcal;
+}
+
+// 蟷ｳ蝮・＃謌千紫・郁ｨ育判縺ｫ蟇ｾ縺吶ｋ螳溽ｸｾ・・double sumProgress = 0.0;
+for (int i = 0; i < 7; i++) {
+  final d = start.add(Duration(days: i));
+  final key = Repo.ymd(d);
+  final entry = dailyMap[key]!;
+  final target = DailyGoalRepository.getByDate(d)?.targetKcal ?? 300;
+  if (target <= 0) {
+    sumProgress += 0.0;
+  } else {
+    sumProgress += (entry.kcal / target).clamp(0.0, 1.0);
+  }
+}
+final avgProgress = sumProgress / 7.0;
+
+final trend = dailyMap.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+
+return WeeklyReportResult(
+  start: start,
+  end: end,
+  stepsTotal: stepsTotal,
+  stairsTotal: stairsTotal,
+  microTotal: microTotal,
+  highKneeTotal: highKneeTotal,
+  walkFastTotal: walkFastTotal,
+  calfRaiseTotal: calfRaiseTotal,
+  avgProgress: avgProgress,
+  kcalTotal: kcalTotal,
+  trend: trend,
+);
+}
+
+static List<DailyTrendEntry> dailyTrend(DateTime forWeekStart, {double? weightKg}) {\nreturn generate(forWeekStart, weightKg: weightKg).trend;\n}
+}
+

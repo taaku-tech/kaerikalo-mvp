@@ -14,8 +14,8 @@ const defaultFoods = <FoodPreset>[
 ];
 
 const microActions = <MicroAction>[
-  MicroAction(id: 'walk_fast', name: '早歩き', unitLabel: '分', kcalPerUnit: 5, exampleText: '次の横断歩道まで90秒'),
-  MicroAction(id: 'stairs', name: '階段', unitLabel: '往復', kcalPerUnit: 12, exampleText: '20段×2往復'),
-  MicroAction(id: 'high_knee', name: 'もも上げ', unitLabel: '回', kcalPerUnit: 0.8, exampleText: '信号待ちで10回'),
-  MicroAction(id: 'calf_raise', name: 'かかと上げ', unitLabel: '回', kcalPerUnit: 0.6, exampleText: '信号待ちで15回'),
+  MicroAction(id: 'walk_fast', name: '早歩き', unitLabel: '+1分', kcalPerUnit: 5, exampleText: '60秒 ⇒ +5kcal'),
+  MicroAction(id: 'stairs', name: '階段', unitLabel: '+30段', kcalPerUnit: 6, exampleText: '30段 ⇒ +6kcal'),
+  MicroAction(id: 'high_knee', name: 'もも上げ', unitLabel: '+10回', kcalPerUnit: 3, exampleText: '10回 ⇒ +3kcal'),
+  MicroAction(id: 'calf_raise', name: 'かかと上げ', unitLabel: '+10回', kcalPerUnit: 2, exampleText: '10回 ⇒ +2kcal'),
 ];

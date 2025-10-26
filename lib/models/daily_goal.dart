@@ -1,10 +1,25 @@
-/// 目標のソース：食べ物プリセット or 手入力kcal
-enum GoalSource { food, custom }
+// 目標のソース：食べ物プリセット or 手入力kcal
+import 'package:hive/hive.dart';
 
+part 'daily_goal.g.dart';
+
+@HiveType(typeId: 1)
+enum GoalSource {
+  @HiveField(0)
+  food,
+  @HiveField(1)
+  custom,
+}
+
+@HiveType(typeId: 10)
 class DailyGoal {
+  @HiveField(0)
   final DateTime date;        // 当日
+  @HiveField(1)
   final int targetKcal;       // 例: 300
+  @HiveField(2)
   final GoalSource source;    // food / custom
+  @HiveField(3)
   final String? foodPresetId; // source==food のとき
 
   const DailyGoal({
