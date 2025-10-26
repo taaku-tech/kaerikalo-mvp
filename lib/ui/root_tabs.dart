@@ -8,53 +8,41 @@ import '../screens/settings_screen.dart';
 import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
 
-class RootTabs extends StatefulWidget {
+class RootTabs extends StatelessWidget {
   const RootTabs({super.key});
+
   @override
-  State<RootTabs> createState() => _RootTabsState();
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        if (auth.isAuthenticated) {
+          return const _MainAppView();
+        } else {
+          return const LoginScreen();
+        }
+      },
+    );
+  }
 }
 
-class _RootTabsState extends State<RootTabs> {
-  int idx = 0;
-  final pages = const [
-    HomeScreen(),
-    LogScreen(),
-    WeeklyReportPage(),
-    SettingsScreen(),
-  ];
-
-  bool _checkedAuth = false;
+class _MainAppView extends StatefulWidget {
+  const _MainAppView();
 
   @override
-  void initState() {
-    super.initState();
-    // Initial auth check -> navigate to login if needed
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || _checkedAuth) return;
-      _checkedAuth = true;
-      try {
-        final auth = Provider.of<AuthProvider>(context, listen: false);
-        await auth.loadPersisted();
-        if (!auth.isAuthenticated && mounted) {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              transitionDuration: const Duration(milliseconds: 300),
-              pageBuilder: (_, a, __) => const LoginScreen(),
-              transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
-            ),
-          );
-        }
-      } catch (_) {}
-    });
-  }
+  State<_MainAppView> createState() => _MainAppViewState();
+}
+
+class _MainAppViewState extends State<_MainAppView> {
+  int _idx = 0;
+  final _pages = const [HomeScreen(), LogScreen(), WeeklyReportPage(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: pages[idx],
+      body: _pages[_idx],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: idx,
-        onDestinationSelected: (i) => setState(() => idx = i),
+        selectedIndex: _idx,
+        onDestinationSelected: (i) => setState(() => _idx = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.edit_note), label: 'Log'),
@@ -65,4 +53,3 @@ class _RootTabsState extends State<RootTabs> {
     );
   }
 }
-

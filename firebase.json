@@ -1,0 +1,39 @@
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kaerikalo-mvp-backend",
+          "appId": "1:35602861071:android:5dc5618c08ee6762fbe77a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kaerikalo-mvp-backend",
+          "configurations": {
+            "android": "1:35602861071:android:5dc5618c08ee6762fbe77a",
+            "ios": "1:35602861071:ios:d52ebaec19aaaa6afbe77a",
+            "macos": "1:35602861071:ios:d52ebaec19aaaa6afbe77a",
+            "web": "1:35602861071:web:884ef048a5b778b6fbe77a",
+            "windows": "1:35602861071:web:76a40f4e142c44dbfbe77a"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,3 @@
-import '../models/user_profile.dart';
 
 class CalorieService {
   static const double baselineWeightKg = 60.0;

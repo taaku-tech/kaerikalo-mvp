@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'providers/goal_provider.dart';
@@ -8,7 +9,6 @@ import 'providers/daily_goal_provider.dart';
 import 'providers/activity_provider.dart';
 
 import 'ui/root_tabs.dart';
-import 'ui/auth/login_screen.dart';
 import 'providers/auth_provider.dart';
 import 'models/user_profile.dart';
 import 'repositories/user_profile_repository.dart';
@@ -20,13 +20,12 @@ import 'models/app_prefs.dart';
 
 import 'services/notification_service.dart';
 import 'services/bootstrap_service.dart';
-import 'services/auth_service.dart';
-import 'services/fake_auth_service.dart';
-import 'services/auth_client.dart';
-import 'config/app_config.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
 WidgetsFlutterBinding.ensureInitialized();
+
+await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
 await Hive.initFlutter();
 await _cleanupLegacyBoxes();
@@ -65,12 +64,7 @@ providers: [
 ChangeNotifierProvider.value(value: goalProvider),
 ChangeNotifierProvider<DailyGoalProvider>(create: (_) => DailyGoalProvider()),
 ChangeNotifierProvider<ActivityProvider>(create: (_) => ActivityProvider()),
-ChangeNotifierProvider<AuthProvider>(create: (_) {
-  final AuthClient client = AppConfig.useFakeAuth
-      ? FakeAuthService()
-      : AuthService(baseUrl: AppConfig.apiBaseUrl);
-  return AuthProvider(auth: client);
-}),
+ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()..loadPersisted()),
 ],
 child: const KaerikaroApp(),
 ),
@@ -97,4 +91,3 @@ home: const RootTabs(),
 }
 
 // RootTabs moved to ui/root_tabs.dart
-

@@ -1,134 +1,107 @@
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import '../repositories/user_profile_repository.dart';
-import '../services/auth_client.dart';
-import '../services/secure_storage_service.dart';
 import '../models/user_profile.dart';
+import '../repositories/user_profile_repository.dart';
 
-class AuthProvider extends ChangeNotifier {
-  final AuthClient _auth;
-  bool _loading = false;
-  bool _remember = false;
-  String? _accessToken;
-  DateTime? _accessExpAt;
+class AuthProvider with ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  User? _firebaseUser;
   UserProfile? _profile;
+  bool _isLoading = false;
 
-  AuthProvider({required AuthClient auth}) : _auth = auth;
-
-  bool get isLoading => _loading;
-  bool get isAuthenticated => _accessToken != null;
-  bool get rememberLogin => _remember;
+  User? get user => _firebaseUser;
   UserProfile? get profile => _profile;
+  bool get isLoading => _isLoading;
+  bool get isAuthenticated => _firebaseUser != null;
+
+  AuthProvider() {
+    _auth.authStateChanges().listen(_onAuthStateChanged);
+  }
+
+  Future<void> _onAuthStateChanged(User? firebaseUser) async {
+    _setLoading(true);
+    _firebaseUser = firebaseUser;
+    if (firebaseUser != null) {
+      // User is logged in, load their profile from local storage (Hive).
+      _profile = UserProfileRepository.get(firebaseUser.uid);
+    } else {
+      // User is logged out, clear profile data.
+      if (_profile != null) await UserProfileRepository.delete(_profile!.id);
+      _profile = null;
+    }
+    _setLoading(false);
+  }
 
   Future<void> loadPersisted() async {
-    final prefs = await SharedPreferences.getInstance();
-    _remember = prefs.getBool('auth.rememberLogin') ?? false;
-    _accessToken = await SecureStorageService.getAccessToken();
-    _accessExpAt = await SecureStorageService.getAccessExpAt();
-    if (_accessToken != null) {
-      final p = UserProfileRepository.get();
-      _profile = p;
-    }
-    notifyListeners();
-  }
-
-  Future<void> setRemember(bool v) async {
-    _remember = v;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('auth.rememberLogin', v);
-    notifyListeners();
-  }
-
-  Future<void> logout() async {
-    _accessToken = null;
-    _accessExpAt = null;
-    _profile = null;
-    await SecureStorageService.clear();
-    await UserProfileRepository.clear();
-    notifyListeners();
-  }
-
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    _loading = true;
-    notifyListeners();
-    try {
-      final tokens = await _auth.login(email: email, password: password);
-      _accessToken = tokens.accessToken;
-      _accessExpAt = tokens.accessExpAt;
-      final refresh = _remember ? tokens.refreshToken : null;
-      await SecureStorageService.saveTokens(
-        accessToken: tokens.accessToken,
-        refreshToken: refresh,
-        accessExpAt: tokens.accessExpAt,
-      );
-      final me = await _auth.me(tokens.accessToken);
-      _profile = me;
-      await UserProfileRepository.save(me);
-    } finally {
-      _loading = false;
-      notifyListeners();
+    // The authStateChanges stream handles the initial state,
+    // but we can call this to ensure the profile is loaded on app start if needed.
+    if (_auth.currentUser != null && _profile == null) {
+      await _onAuthStateChanged(_auth.currentUser);
     }
   }
 
-  Future<void> signup({
-    required String email,
-    required String password,
-    required String nickname,
-    required double heightCm,
-    required double weightKg,
-  }) async {
-    _loading = true;
-    notifyListeners();
+  Future<void> signUp(String email, String password) async {
+    _setLoading(true);
     try {
-      await _auth.signup(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
-        nickname: nickname,
-        heightCm: heightCm,
-        weightKg: weightKg,
       );
-      // auto login
-      await login(email: email, password: password);
-    } finally {
-      _loading = false;
-      notifyListeners();
+      // After successful sign-up, create a default profile.
+      if (credential.user != null) {
+        final uid = credential.user!.uid;
+        final nickname = email.split('@').first;
+        _profile = UserProfile(
+          id: uid,
+          email: email,
+          nickname: nickname,
+          heightCm: 160, // Default value
+          weightKg: 55,  // Default value
+        );
+        await UserProfileRepository.save(uid, _profile!);
+      }
+    } on FirebaseAuthException {
+      _setLoading(false);
+      rethrow;
     }
+    // Loading state is managed by _onAuthStateChanged, but we ensure it's false here
+    // in case the listener hasn't fired yet when the Future completes.
+    _setLoading(false);
   }
 
-  Future<void> refreshProfile() async {
-    final token = _accessToken;
-    if (token == null) return;
-    final me = await _auth.me(token);
-    _profile = me;
-    await UserProfileRepository.save(me);
-    notifyListeners();
-  }
-
-  Future<void> updateProfile({
-    required String nickname,
-    required double heightCm,
-    required double weightKg,
-  }) async {
-    final token = _accessToken;
-    if (token == null) return;
-    _loading = true;
-    notifyListeners();
+  Future<void> logIn(String email, String password) async {
+    _setLoading(true);
     try {
-      final updated = await _auth.updateMe(
-        accessToken: token,
-        nickname: nickname,
-        heightCm: heightCm,
-        weightKg: weightKg,
+      await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-      _profile = updated;
-      await UserProfileRepository.save(updated);
-    } finally {
-      _loading = false;
-      notifyListeners();
+    } on FirebaseAuthException {
+      _setLoading(false);
+      rethrow;
     }
+    // Loading state is managed by _onAuthStateChanged, but we ensure it's false here
+    // in case the listener hasn't fired yet when the Future completes.
+    _setLoading(false);
+  }
+
+  Future<void> logOut() async {
+    await _auth.signOut();
+  }
+
+  Future<void> updateProfile({required String nickname, required double heightCm, required double weightKg}) async {
+    if (_profile == null || _firebaseUser == null) return;
+    _setLoading(true);
+    _profile = _profile!.copyWith(nickname: nickname, heightCm: heightCm, weightKg: weightKg);
+    // Ensure we save the profile against the correct user ID.
+    await UserProfileRepository.save(_firebaseUser!.uid, _profile!);
+    _setLoading(false);
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
   }
 }

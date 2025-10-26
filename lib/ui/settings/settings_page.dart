@@ -114,7 +114,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.of(context).push(
                       PageRouteBuilder(
                         transitionDuration: const Duration(milliseconds: 300),
-                        pageBuilder: (_, a, __) => const LoginScreen(fromSettings: true),
+                        pageBuilder: (_, a, __) => const LoginScreen(),
                         transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
                       ),
                     );
@@ -145,12 +145,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       ) ??
                       false;
                   if (!ok) return;
-                  await auth.logout();
+                  await auth.logOut();
                   if (!context.mounted) return;
                   Navigator.of(context).pushAndRemoveUntil(
                     PageRouteBuilder(
                       transitionDuration: const Duration(milliseconds: 300),
-                      pageBuilder: (_, a, __) => const LoginScreen(fromSettings: true),
+                      pageBuilder: (_, a, __) => const LoginScreen(),
                       transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
                     ),
                     (_) => false,

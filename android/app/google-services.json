@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35602861071",
+    "project_id": "kaerikalo-mvp-backend",
+    "storage_bucket": "kaerikalo-mvp-backend.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35602861071:android:5dc5618c08ee6762fbe77a",
+        "android_client_info": {
+          "package_name": "com.example.kaerikalo_mvp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDE5rXNa3qWNg954_sz0ivlOSaVt2Orayk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

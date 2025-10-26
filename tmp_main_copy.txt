@@ -76,7 +76,7 @@ const KaerikaroApp({super.key});
 @override
 Widget build(BuildContext context) {
 return MaterialApp(
-title: 'ƒJƒGƒŠƒJƒ',
+title: 'ï¿½Jï¿½Gï¿½ï¿½ï¿½Jï¿½ï¿½',
 theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF2EC4B6)),
 home: const RootTabs(),
 );
