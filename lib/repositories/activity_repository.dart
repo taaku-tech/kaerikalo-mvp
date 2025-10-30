@@ -35,12 +35,9 @@ class ActivityRepository {
   }
 
   static Future<int> deleteByDate(DateTime date) async {
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDayExclusive = startOfDay.add(const Duration(days: 1));
-
-    // Collect keys (ids) whose timestamp falls within the day
+    final keyYmd = Repo.ymd(date);
     final keys = _box.values
-        .where((e) => !e.timestamp.isBefore(startOfDay) && e.timestamp.isBefore(endOfDayExclusive))
+        .where((e) => e.ymd == keyYmd)
         .map((e) => e.id)
         .toList();
 

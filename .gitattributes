@@ -1,0 +1,32 @@
+# Normalize line endings for text files to LF across platforms
+* text=auto eol=lf
+
+# Keep Windows script files with CRLF
+*.bat eol=crlf
+*.cmd eol=crlf
+*.ps1 eol=crlf
+
+# Common binary types (never modify line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tgz binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# Mobile/desktop binary artifacts
+*.keystore binary
+*.jks binary
+*.so binary
+*.dll binary
+*.dylib binary

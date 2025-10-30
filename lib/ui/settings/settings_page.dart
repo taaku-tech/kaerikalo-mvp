@@ -5,9 +5,6 @@ import 'package:hive/hive.dart';
 import '../../models/app_prefs.dart';
 import '../../repositories/app_prefs_repository.dart';
 import '../../services/notification_service.dart';
-import '../../repositories/daily_goal_repository.dart';
-import '../../repositories/daily_summary_repository.dart';
-import '../../repositories/activity_repository.dart';
 import '../../models/daily_goal.dart';
 import '../../models/daily_summary.dart';
 import '../../models/activity_log.dart';
@@ -29,7 +26,6 @@ class _SettingsPageState extends State<SettingsPage> {
   TimeOfDay? _daily;
   int _weeklyDay = 1; // Monday
   TimeOfDay? _weekly;
-  int _weekStart = 1;
 
   @override
   void initState() {
@@ -43,7 +39,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (p?.weeklyHour != null && p?.weeklyMinute != null) {
       _weekly = TimeOfDay(hour: p!.weeklyHour!, minute: p.weeklyMinute!);
     }
-    _weekStart = p?.weekStartWeekday ?? 1;
   }
 
   Future<void> _pickDaily() async {
@@ -71,7 +66,6 @@ class _SettingsPageState extends State<SettingsPage> {
       weeklyWeekday: _weeklyDay,
       weeklyHour: _weekly?.hour,
       weeklyMinute: _weekly?.minute,
-      weekStartWeekday: _weekStart,
     );
     await AppPrefsRepository.save(prefs);
 
@@ -161,7 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ]);
           }),
           SwitchListTile(
-            title: const Text('通知を有効化'),
+            title: const Text('通知有効化（今後予定：今は何も起きません）'),
             value: _enabled,
             onChanged: (v) => setState(() => _enabled = v),
           ),
@@ -206,16 +200,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          const Divider(),
-          DropdownButtonFormField<int>(
-            decoration: const InputDecoration(labelText: '週の開始曜日'),
-            initialValue: _weekStart,
-            items: const [
-              DropdownMenuItem(value: 1, child: Text('月')),
-              DropdownMenuItem(value: 7, child: Text('日')),
-            ],
-            onChanged: (v) => setState(() => _weekStart = v ?? 1),
-          ),
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _save,
@@ -224,52 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
           if (kDebugMode) ...[
             const SizedBox(height: 24),
             const Divider(),
-            Text('デバッグ', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            FilledButton.tonal(
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                // サンプル投入: 直近7日分
-                final now = DateTime.now();
-                for (int i = 0; i < 7; i++) {
-                  final d = DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-                  await DailyGoalRepository.put(DailyGoal(date: d, targetKcal: 300, source: GoalSource.custom));
-                  // steps 2000, stairs 30, micro 2
-                  await ActivityRepository.addLog(ActivityLog(
-                    id: 'sample_${d.millisecondsSinceEpoch}_s',
-                    date: d,
-                    actionId: 'walk',
-                    amount: 2000,
-                    estKcal: 2000 * 0.04,
-                    note: 'sample',
-                    timestamp: d,
-                  ));
-                  await ActivityRepository.addLog(ActivityLog(
-                    id: 'sample_${d.millisecondsSinceEpoch}_st',
-                    date: d,
-                    actionId: 'stairs',
-                    amount: 30,
-                    estKcal: 30 * 0.3,
-                    note: 'sample',
-                    timestamp: d,
-                  ));
-                  await ActivityRepository.addLog(ActivityLog(
-                    id: 'sample_${d.millisecondsSinceEpoch}_m',
-                    date: d,
-                    actionId: 'other',
-                    amount: 2,
-                    estKcal: 2 * 10.0,
-                    note: 'sample',
-                    timestamp: d,
-                  ));
-                  final kcal = 2000 * 0.04 + 30 * 0.3 + 2 * 10.0;
-                  await DailySummaryRepository.upsert(DailySummary(date: d, targetKcal: 300, burnedKcal: kcal));
-                }
-                if (!mounted) return;
-                messenger.showSnackBar(const SnackBar(content: Text('サンプル投入が完了しました')));
-              },
-              child: const Text('サンプル投入'),
-            ),
+            Text('初期化', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             FilledButton.tonal(
               onPressed: () async {

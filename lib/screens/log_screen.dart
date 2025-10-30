@@ -115,7 +115,7 @@ final today = DateTime.now();
 final ymd = _ymd(today);
 
 return Scaffold(
-  appBar: AppBar(title: const Text('ログ管理')),
+  appBar: AppBar(title: const Text('本日の進捗')),
   body: ValueListenableBuilder<Box<ActivityLog>>(
     valueListenable: Hive.box<ActivityLog>('activity_logs').listenable(),
     builder: (context, _, __) {
@@ -134,9 +134,9 @@ return Scaffold(
           .fold<double>(0.0, (s, e) => s + e.estKcal);
 
       // 達成率（プランに対する実績）, 最大100%
-      final pct = plannedKcal == 0
+      final pct = plannedKcal <= 0
           ? '0.0'
-          : ((actualKcalDouble / plannedKcal) * 100).clamp(0, 100).toStringAsFixed(1);
+          : ((actualKcalDouble / plannedKcal) * 100).toStringAsFixed(1);
 
       // 1アクションごとの表示（プラン/実績/達成率）
       List<Widget> perAction(String id, String title) {
@@ -150,12 +150,12 @@ return Scaffold(
         final planUnits = _kcalToUnits(id, planKcal, weightKg: context.read<AuthProvider>().profile?.weightKg);
         final actualUnits = _unitsFromKcalDouble(id, actualKcalDoubleById, weightKg: context.read<AuthProvider>().profile?.weightKg);
         final rate = planKcal == 0 ? 0.0 : (actualKcalDoubleById / planKcal).clamp(0, 1).toDouble();
-        final ratePct = planKcal == 0
+        final ratePct = planKcal <= 0
             ? '0.0'
-            : ((actualKcalDoubleById / planKcal) * 100).clamp(0, 100).toStringAsFixed(1);
+            : ((actualKcalDoubleById / planKcal) * 100).toStringAsFixed(1);
 
         return [
-          Text('$title の達成状況: 目標 $planUnits$unit（i${planKcal}kcal） / 実績 $actualUnits$unit（${actualKcalDoubleById.toStringAsFixed(1)}kcal）[$ratePct%]'),
+          Text('$title の達成状況: プラン $planUnits$unit（${planKcal}kcal） / 実績 $actualUnits$unit（${actualKcalDoubleById.toStringAsFixed(1)}kcal）[$ratePct%]'),
           const SizedBox(height: 4),
           LinearProgressIndicator(value: rate),
           const SizedBox(height: 8),
@@ -173,7 +173,7 @@ return Scaffold(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('今日の目標に対する進捗', style: Theme.of(context).textTheme.titleMedium),
+                  Text('目標に対する進捗', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text('目標 $target kcal / プラン合計 $plannedKcal kcal / 実績合計 ${actualKcalDouble.toStringAsFixed(1)} kcal（達成率 $pct%）'),
                   const SizedBox(height: 8),
@@ -237,7 +237,7 @@ return Scaffold(
                       const SnackBar(content: Text('プランどおりに実績を登録しました')),
                     );
                   },
-                  child: const Text('プラン→実績 反映'),
+                  child: const Text('プランをそのまま実績に反映'),
                 ),
               ),
             ],
@@ -515,10 +515,3 @@ return Card(
 );
 }
 }
-
-
-
-
-
-
-

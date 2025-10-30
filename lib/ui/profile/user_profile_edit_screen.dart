@@ -64,17 +64,30 @@ class _UserProfileEditScreenState extends State<UserProfileEditScreen> {
     final auth = context.watch<AuthProvider>();
     final p = auth.profile;
     if (!auth.isAuthenticated) {
-      Future.microtask(() => Navigator.of(context).pushReplacementNamed('/login'));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
+      });
       return const SizedBox.shrink();
     }
-    return WillPopScope(
-      onWillPop: _confirmLeave,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final ok = await _confirmLeave();
+        if (!context.mounted) return;
+        if (ok) Navigator.of(context).pop();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('ユーザー情報編集'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () async { if (await _confirmLeave()) Navigator.of(context).pop(); },
+            onPressed: () async {
+              final ok = await _confirmLeave();
+              if (!context.mounted) return;
+              if (ok) Navigator.of(context).pop();
+            },
           ),
         ),
         body: Padding(
@@ -147,7 +160,11 @@ class _UserProfileEditScreenState extends State<UserProfileEditScreen> {
                 Row(children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () async { if (await _confirmLeave()) Navigator.of(context).pop(); },
+                      onPressed: () async {
+                        final ok = await _confirmLeave();
+                        if (!context.mounted) return;
+                        if (ok) Navigator.of(context).pop();
+                      },
                       child: const Text('キャンセル'),
                     ),
                   ),
@@ -164,11 +181,11 @@ class _UserProfileEditScreenState extends State<UserProfileEditScreen> {
                                   heightCm: double.parse(_height.text.replaceAll(',', '.')),
                                   weightKg: double.parse(_weight.text.replaceAll(',', '.')),
                                 );
-                                if (!mounted) return;
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
                                 Navigator.of(context).pop();
                               } catch (_) {
-                                if (!mounted) return;
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ネットワークエラー。再試行してください')));
                               }
                             },
@@ -184,4 +201,3 @@ class _UserProfileEditScreenState extends State<UserProfileEditScreen> {
     );
   }
 }
-

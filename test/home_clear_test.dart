@@ -60,7 +60,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Confirm dialog
-    expect(find.text('実績をクリア'), findsOneWidget);
+    expect(find.text('プランと実績をクリアする'), findsOneWidget);
     await tester.tap(find.text('OK'));
     await tester.pump();
 
@@ -73,7 +73,6 @@ void main() {
 
     // Snackbar shown
     await tester.pump();
-    expect(find.text('今日の実績をクリアしました'), findsOneWidget);
+    expect(find.text('今日のプランと実績をクリアしました'), findsOneWidget);
   });
 }
-

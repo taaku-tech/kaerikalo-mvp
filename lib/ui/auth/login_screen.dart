@@ -24,12 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    // Don't await here. The AuthProvider's stream will trigger the navigation.
-    // We listen for completion to handle errors and loading state.
     action(_emailController.text, _passwordController.text).then((_) {
-      // Success is handled by the auth state listener in RootTabs.
-      // We just need to make sure the loading indicator is turned off if the user
-      // is still on this screen for some reason (e.g. listener is slow).
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -37,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = '認証に失敗しました。メールアドレスかパスワードを確認してください。';
+          _errorMessage = '認証に失敗しました。メールアドレスかパスワードを確認してください';
         });
       }
     });
@@ -98,6 +93,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => _submit(authProvider.signUp),
                         child: const Text('新規登録'),
                       ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () async {
+                            final email = _emailController.text.trim();
+                            if (email.isEmpty || !email.contains('@')) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('有効なメールアドレスを入力してください')),
+                              );
+                              return;
+                            }
+                            try {
+                              await authProvider.resetPassword(email);
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('パスワード再設定用のメールを送信しました')),
+                              );
+                            } catch (_) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('メール送信に失敗しました。時間をおいて再試行してください')),
+                              );
+                            }
+                          },
+                          child: const Text('パスワードをお忘れですか？(再設定のメール送信)'),
+                        ),
+                      ),
                     ],
                   ),
               ],
@@ -108,3 +132,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

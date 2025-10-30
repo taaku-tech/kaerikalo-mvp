@@ -26,6 +26,19 @@ class AuthProvider with ChangeNotifier {
     if (firebaseUser != null) {
       // User is logged in, load their profile from local storage (Hive).
       _profile = UserProfileRepository.get(firebaseUser.uid);
+      // If profile doesn't exist locally (e.g., first login on a new device),
+      // create a default one.
+      if (_profile == null) {
+        final nickname = firebaseUser.email?.split('@').first ?? 'User';
+        _profile = UserProfile(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          nickname: nickname,
+          heightCm: 170, // Default value
+          weightKg: 60,  // Default value
+        );
+        await UserProfileRepository.save(firebaseUser.uid, _profile!);
+      }
     } else {
       // User is logged out, clear profile data.
       if (_profile != null) await UserProfileRepository.delete(_profile!.id);
@@ -61,14 +74,15 @@ class AuthProvider with ChangeNotifier {
           weightKg: 55,  // Default value
         );
         await UserProfileRepository.save(uid, _profile!);
+
+        // Ensure UI updates immediately without relying solely on the stream
+        await _onAuthStateChanged(credential.user);
       }
     } on FirebaseAuthException {
       _setLoading(false);
       rethrow;
     }
-    // Loading state is managed by _onAuthStateChanged, but we ensure it's false here
-    // in case the listener hasn't fired yet when the Future completes.
-    _setLoading(false);
+    // _onAuthStateChanged handles loading state and notifications.
   }
 
   Future<void> logIn(String email, String password) async {
@@ -78,12 +92,27 @@ class AuthProvider with ChangeNotifier {
         email: email,
         password: password,
       );
+      // Proactively reflect the new state on Web where the stream might lag
+      await _onAuthStateChanged(_auth.currentUser);
     } on FirebaseAuthException {
       _setLoading(false);
       rethrow;
     }
-    // Loading state is managed by _onAuthStateChanged, but we ensure it's false here
-    // in case the listener hasn't fired yet when the Future completes.
+    // _onAuthStateChanged handles loading state and notifications.
+  }
+
+  Future<void> resetPassword(String email) async {
+    final addr = email.trim();
+    if (addr.isEmpty) {
+      throw FirebaseAuthException(code: 'invalid-email', message: 'Email is empty');
+    }
+    _setLoading(true);
+    try {
+      await _auth.sendPasswordResetEmail(email: addr);
+    } on FirebaseAuthException {
+      _setLoading(false);
+      rethrow;
+    }
     _setLoading(false);
   }
 
@@ -98,6 +127,7 @@ class AuthProvider with ChangeNotifier {
     // Ensure we save the profile against the correct user ID.
     await UserProfileRepository.save(_firebaseUser!.uid, _profile!);
     _setLoading(false);
+    notifyListeners(); // Notify UI about the profile update
   }
 
   void _setLoading(bool value) {

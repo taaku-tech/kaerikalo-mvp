@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../screens/home_screen.dart';
 import '../screens/log_screen.dart';
-import '../ui/report/weekly_report_page.dart';
-import '../screens/settings_screen.dart';
+import 'report/weekly_report_page.dart';
+import 'settings/settings_page.dart';
 import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
 
@@ -34,7 +34,7 @@ class _MainAppView extends StatefulWidget {
 
 class _MainAppViewState extends State<_MainAppView> {
   int _idx = 0;
-  final _pages = const [HomeScreen(), LogScreen(), WeeklyReportPage(), SettingsScreen()];
+  final _pages = const [HomeScreen(), LogScreen(), WeeklyReportPage(), SettingsPage()];
 
   @override
   Widget build(BuildContext context) {

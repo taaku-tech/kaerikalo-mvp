@@ -98,8 +98,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           final ok = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  title: const Text('実績をクリア'),
-                                  content: const Text('今日の実績（実際消費）を0に戻します。よろしいですか？'),
+                                  title: const Text('プランと実績をクリアする'),
+                                  content: const Text('今日のプランを0に戻します。よろしいですか？'),
                                   actions: [
                                     TextButton(
                                         onPressed: () => navigator.pop(false),
@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               false;
                           if (!ok) return;
                           await activity.clearTodayAndRecalc();
-                          // 計画消費もリセット（当日キーを削除）
+                          // プランをリセット（当日キーを削除）
                           final box = Hive.box<int>('activity_targets');
                           final ymd = _ymd(DateTime.now());
                           final keys = box.keys.whereType<String>().where((k) => k.startsWith(ymd)).toList();
@@ -122,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           }
                           if (!mounted) return;
                           messenger.showSnackBar(
-                            const SnackBar(content: Text('今日の実績をクリアしました')),
+                            const SnackBar(content: Text('今日のプランと実績をクリアしました')),
                           );
                           setState(() {});
                         },
@@ -130,48 +130,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 3.5,
                     children: [
-                      for (final f in defaultFoods)
-                        ActionChip(
-                          label: Text('${f.name}（${f.kcal}kcal）'),
-                          onPressed: () async {
-                            final now = DateTime.now();
-                            final messenger = ScaffoldMessenger.of(context);
-                            await goalProv.save(
-                              (goalProv.current ??
-                                      DailyGoal(
-                                        date: DateTime(now.year, now.month, now.day),
-                                        targetKcal: f.kcal,
-                                        source: GoalSource.custom,
-                                      ))
-                                  .copyWith(targetKcal: f.kcal),
-                            );
-                            if (!mounted) return;
-                            _kcalCtrl.text = f.kcal.toString();
-                            messenger.showSnackBar(const SnackBar(content: Text('目標を更新しました')));
-                          },
-                        ),
-                      ActionChip(
-                        label: const Text('200kcal'),
-                        onPressed: () async {
-                          final now = DateTime.now();
-                          final messenger = ScaffoldMessenger.of(context);
-                          await goalProv.save(
-                            (goalProv.current ??
-                                    DailyGoal(
-                                      date: DateTime(now.year, now.month, now.day),
-                                      targetKcal: 200,
-                                      source: GoalSource.custom,
-                                    ))
-                                .copyWith(targetKcal: 200),
-                          );
-                          if (!mounted) return;
-                          _kcalCtrl.text = '200';
-                          messenger.showSnackBar(const SnackBar(content: Text('目標を更新しました')));
-                        },
+                      ...defaultFoods.map((f) {
+                        return FilledButton.tonal(
+                          child: Text('${f.name}\n（${f.kcal}kcal）', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+                          onPressed: () => _setTarget(f.kcal),
+                        );
+                      }),
+                      FilledButton.tonal(
+                        child: const Text('250kcal※30日継続で脂肪約1kg減', textAlign: TextAlign.center),
+                        onPressed: () => _setTarget(250),
                       ),
                     ],
                   ),
@@ -218,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text('目標 $target kcal / 計画消費 $planned kcal'),
+                  Text('目標 $target kcal / プラン $planned kcal'),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: target == 0 ? 0 : (planned / target).clamp(0, 1).toDouble(),
@@ -232,8 +207,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 12),
 
-          // 今日のおすすめ（計画）
-          Text('今日のおすすめ「ちょい運動」', style: Theme.of(context).textTheme.titleMedium),
+          // 今日のおすすめ（プラン）
+          Text('今日のおすすめプラン「ちょい運動」', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
 
           // 追加: 選択済み一覧（ある場合のみ）
@@ -307,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('今日のおすすめ（選択済みの計画）', style: Theme.of(context).textTheme.titleMedium),
+                          Text('今日のおすすめ（選択済みのプラン）', style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 8),
                           ...selected,
                         ],
@@ -320,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
 
-          // 遠回りで帰宅（計画に追加）
+          // 遠回りで帰宅（プランに追加）
           Card(
             child: ListTile(
               leading: const Icon(Icons.directions_walk),
@@ -380,14 +355,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 if (!mounted) return;
                 setState(() {});
                 messenger.showSnackBar(
-                  SnackBar(content: Text('計画に +$add kcal を追加しました')),
+                  SnackBar(content: Text('プランに +$add kcal を追加しました')),
                 );
               },
             ),
           ),
           const SizedBox(height: 8),
 
-          // 他の4項目（計画に追加）
+          // 他の4項目（プランに追加）
           ...['high_knee', 'walk_fast', 'stairs', 'calf_raise'].map((id) {
             final a = microActions.firstWhere((e) => e.id == id);
             final add = a.kcalPerUnit.round();
@@ -404,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   if (!mounted) return;
                   setState(() {});
                   messenger.showSnackBar(
-                    SnackBar(content: Text('計画に +${add}kcal を追加しました（${a.name}）')),
+                    SnackBar(content: Text('プランに +${add}kcal を追加しました（${a.name}）')),
                   );
                 },
               ),
@@ -416,66 +391,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // 別途追加（任意のショートカット）
           Text('別途追加', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          Row(
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1.8, // ボタンの縦横比を調整
             children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    final box = Hive.box<int>('activity_targets');
-                    // 遠回りは detour_kcal のみに反映
-                    final detourKey = '${_ymd(DateTime.now())}:detour_kcal';
-                    final dv = (box.get(detourKey) ?? 0) + 4;
-                    await box.put(detourKey, dv);
-                    if (!mounted) return;
-                    setState(() {});
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('計画に +4kcal を追加しました（遠回り）')),
-                    );
-                  },
-                  child: const Text('遠回り：+100歩(+4kcal)'),
-                ),
+              FilledButton(
+                onPressed: () => _addPlan('detour_kcal', 4, '遠回り'),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('遠回り\n+100歩\n(+4kcal)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    final box = Hive.box<int>('activity_targets');
-                    final key = '${_ymd(DateTime.now())}:stairs_kcal';
-                    final v = (box.get(key) ?? 0) + 3;
-                    await box.put(key, v);
-                    if (!mounted) return;
-                    setState(() {});
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('計画に +3kcal を追加しました（階段）')),
-                    );
-                  },
-                  child: const Text('階段：+15段(+3kcal)'),
-                ),
+              FilledButton(
+                onPressed: () => _addPlan('stairs_kcal', 3, '階段'),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('階段\n+15段\n(+3kcal)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    final box = Hive.box<int>('activity_targets');
-                    final key = '${_ymd(DateTime.now())}:walk_fast_kcal';
-                    final v = (box.get(key) ?? 0) + 2;
-                    await box.put(key, v);
-                    if (!mounted) return;
-                    setState(() {});
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('計画に +2kcal を追加しました（早歩き）')),
-                    );
-                  },
-                  child: const Text('早歩き：+30秒(+2kcal)'),
-                ),
+              FilledButton(
+                onPressed: () => _addPlan('walk_fast_kcal', 2, '早歩き'),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('早歩き\n+30秒\n(+2kcal)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _setTarget(int kcal) async {
+    final goalProv = context.read<DailyGoalProvider>();
+    final now = DateTime.now();
+    final messenger = ScaffoldMessenger.of(context);
+    await goalProv.save(
+      (goalProv.current ??
+              DailyGoal(
+                date: DateTime(now.year, now.month, now.day),
+                targetKcal: kcal,
+                source: GoalSource.custom,
+              ))
+          .copyWith(targetKcal: kcal),
+    );
+    if (!mounted) return;
+    _kcalCtrl.text = kcal.toString();
+    messenger.showSnackBar(const SnackBar(content: Text('目標を更新しました')));
+  }
+
+  Future<void> _addPlan(String planKey, int kcal, String name) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final box = Hive.box<int>('activity_targets');
+    final key = '${_ymd(DateTime.now())}:$planKey';
+    final currentValue = box.get(key) ?? 0;
+    await box.put(key, currentValue + kcal);
+
+    if (!mounted) return;
+    setState(() {});
+    messenger.showSnackBar(
+      SnackBar(content: Text('プランに +${kcal}kcal を追加しました（$name）')),
     );
   }
 }
@@ -486,7 +460,7 @@ String _ymd(DateTime dt) {
   return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
-// 計画の保存キー（HOME/LOGで共通の規則を使用）
+// プランの保存キー（HOME/LOGで共通の規則を使用）
 String _planKeyForId(String id) {
   switch (id) {
     case 'walk':
@@ -500,7 +474,7 @@ String _planKeyForId(String id) {
   }
 }
 
-// 計画消費（合計）
+// プランのカロリー消費量（合計）
 int _plannedKcalSum() {
   if (!Hive.isBoxOpen('activity_targets')) return 0;
   final box = Hive.box<int>('activity_targets');
