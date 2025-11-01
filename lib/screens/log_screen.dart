@@ -109,8 +109,8 @@ const LogScreen({super.key});
 
 @override
 Widget build(BuildContext context) {
-final goalProv = context.watch<DailyGoalProvider>();
-final target = goalProv.current?.targetKcal ?? 300;
+  final goalProv = context.watch<DailyGoalProvider>();
+  final target = goalProv.current?.targetKcal ?? 200;
 final today = DateTime.now();
 final ymd = _ymd(today);
 

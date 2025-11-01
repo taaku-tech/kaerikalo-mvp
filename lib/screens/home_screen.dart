@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -62,7 +63,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final goalProv = context.watch<DailyGoalProvider>();
-    final target = goalProv.current?.targetKcal ?? 300;
+    // 未設定時のデフォルトは 200kcal
+    final target = goalProv.current?.targetKcal ?? 200;
 
     final planned = _plannedKcalSum();
     final remain = (target - planned).clamp(0, 999999);
@@ -88,6 +90,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       Text('本日の目標', style: Theme.of(context).textTheme.titleMedium),
                       const Spacer(),
+                      TextButton.icon(
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('おすすめ作成'),
+                        onPressed: () async {
+                          await _createSuggestedPlan();
+                        },
+                      ),
                       TextButton.icon(
                         icon: const Icon(Icons.refresh),
                         label: const Text('クリア'),
@@ -451,6 +460,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     messenger.showSnackBar(
       SnackBar(content: Text('プランに +${kcal}kcal を追加しました（$name）')),
     );
+  }
+
+  // 今日のおすすめプランを作成（目標の約80%を4種目に配分）
+  Future<void> _createSuggestedPlan() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final goalProv = context.read<DailyGoalProvider>();
+    final now = DateTime.now();
+
+    // 目標が未設定なら 200kcal を当日分として反映
+    var current = goalProv.current;
+    if (current == null) {
+      final created = DailyGoal(
+        date: DateTime(now.year, now.month, now.day),
+        targetKcal: 200,
+        source: GoalSource.custom,
+      );
+      await goalProv.save(created);
+      current = created;
+    }
+
+    final target = (current.targetKcal > 0 ? current.targetKcal : 200);
+    final total = (target * 0.8).round();
+
+    // 4種目ID（順番をシャッフルして毎回変化）
+    final ids = ['walk_fast', 'stairs', 'high_knee', 'calf_raise'];
+    ids.shuffle(Random());
+
+    // 基本配分（40%, 30%, 20%, 10%）を適用し、端数は最後に寄せる
+    final weights = [0.4, 0.3, 0.2, 0.1];
+    final parts = <int>[];
+    int assigned = 0;
+    for (int i = 0; i < ids.length; i++) {
+      if (i < ids.length - 1) {
+        final v = (total * weights[i]).round();
+        parts.add(v);
+        assigned += v;
+      } else {
+        parts.add(total - assigned);
+      }
+    }
+
+    // Hive に上書き保存
+    final box = Hive.box<int>('activity_targets');
+    final ymd = _ymd(now);
+    for (int i = 0; i < ids.length; i++) {
+      final key = '$ymd:${ids[i]}_kcal';
+      await box.put(key, parts[i]);
+    }
+
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('おすすめプランを作成しました（合計 ${total}kcal）'),
+      ),
+    );
+    setState(() {});
   }
 }
 

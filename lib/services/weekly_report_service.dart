@@ -195,7 +195,7 @@ class WeeklyReportService {
       final d = start.add(Duration(days: i));
       final key = Repo.ymd(d);
       final entry = dailyMap[key]!;
-      final target = DailyGoalRepository.getByDate(d)?.targetKcal ?? 300;
+      final target = DailyGoalRepository.getByDate(d)?.targetKcal ?? 200;
       if (target <= 0) {
         sumProgress += 0.0;
       } else {

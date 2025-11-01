@@ -52,7 +52,7 @@ class ActivityProvider extends ChangeNotifier {
   double progressToday() {
     final now = DateTime.now();
     final goal = DailyGoalRepository.getByDate(now);
-    final target = goal?.targetKcal ?? 300;
+    final target = goal?.targetKcal ?? 200;
     final burned = ActivityRepository
         .fetchByDate(now)
         .fold<double>(0.0, (s, e) => s + e.estKcal);
@@ -86,7 +86,7 @@ class ActivityProvider extends ChangeNotifier {
     final burned = ActivityRepository
         .fetchByDate(dateOnly)
         .fold<double>(0.0, (s, e) => s + e.estKcal);
-    final target = (DailyGoalRepository.getByDate(dateOnly)?.targetKcal) ?? 300;
+    final target = (DailyGoalRepository.getByDate(dateOnly)?.targetKcal) ?? 200;
     final summary = DailySummary(
       date: dateOnly,
       targetKcal: target,

@@ -196,7 +196,7 @@ class _WeeklyReportPageState extends State<WeeklyReportPage> {
                                                 Builder(builder: (context) {
                                                   final goalsBox = Hive.box<DailyGoal>('daily_goals');
                                                   final g = goalsBox.get(_ymd(d.date));
-                                                  final tgt = g?.targetKcal ?? 300;
+                                                  final tgt = g?.targetKcal ?? 200;
                                                   final dayPct = tgt <= 0 ? 0.0 : (d.kcal / tgt) * 100.0;
                                                   return Text('${_dateWithWeekday(d.date)}\n(${dayPct.toStringAsFixed(1)}%)', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11));
                                                 }),

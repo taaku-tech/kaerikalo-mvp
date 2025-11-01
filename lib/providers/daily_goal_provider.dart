@@ -18,7 +18,7 @@ class DailyGoalProvider extends ChangeNotifier {
     }
     final created = DailyGoal(
       date: DateTime(now.year, now.month, now.day),
-      targetKcal: 300,
+      targetKcal: 200,
       source: GoalSource.custom,
     );
     await DailyGoalRepository.put(created);
@@ -39,4 +39,3 @@ class DailyGoalProvider extends ChangeNotifier {
     return today();
   }
 }
-

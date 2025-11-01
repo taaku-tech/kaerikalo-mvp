@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -24,18 +24,17 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    action(_emailController.text, _passwordController.text).then((_) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }).catchError((e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = '認証に失敗しました。メールアドレスかパスワードを確認してください';
-        });
-      }
-    });
+    try {
+      await action(_emailController.text, _passwordController.text);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '認証に失敗しました。メールアドレスかパスワードを確認してください';
+      });
+    }
   }
 
   @override
@@ -63,20 +62,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'メールアドレス'),
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) => (value == null || !value.contains('@')) ? '有効なメールアドレスを入力してください' : null,
+                  validator: (value) => (value == null || !value.contains('@'))
+                      ? '有効なメールアドレスを入力してください'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: 'パスワード'),
                   obscureText: true,
-                  validator: (value) => (value == null || value.length < 6) ? '6文字以上のパスワードを入力してください' : null,
+                  validator: (value) => (value == null || value.length < 6)
+                      ? '6文字以上のパスワードを入力してください'
+                      : null,
                 ),
                 const SizedBox(height: 24),
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Text(_errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
                   ),
                 if (_isLoading)
                   const CircularProgressIndicator()
@@ -100,26 +106,32 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () async {
                             final email = _emailController.text.trim();
                             if (email.isEmpty || !email.contains('@')) {
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('有効なメールアドレスを入力してください')),
+                                const SnackBar(
+                                  content: Text('有効なメールアドレスを入力してください'),
+                                ),
                               );
                               return;
                             }
                             try {
                               await authProvider.resetPassword(email);
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('パスワード再設定用のメールを送信しました')),
+                                const SnackBar(
+                                  content: Text('パスワード再設定用のメールを送信しました'),
+                                ),
                               );
                             } catch (_) {
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('メール送信に失敗しました。時間をおいて再試行してください')),
+                                const SnackBar(
+                                  content: Text('メール送信に失敗しました。時間をおいて再試行してください'),
+                                ),
                               );
                             }
                           },
-                          child: const Text('パスワードをお忘れですか？(再設定のメール送信)'),
+                          child: const Text('パスワードをお忘れですか？ 再設定メール送信'),
                         ),
                       ),
                     ],
@@ -132,4 +144,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
